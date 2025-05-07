@@ -1,0 +1,417 @@
+body {
+    font-family: "Vazirmatn";
+    margin: 0;
+    background-color: #fff;
+    display: flex;
+    min-height: 100vh;
+    direction: rtl;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body.dark-mode {
+    background-color: rgb(24, 26, 27);
+    color: #eee;
+}
+
+body.dark-mode #note-editor {
+    background-color: rgb(24, 26, 27);
+    border-color: rgb(24, 26, 27);
+}
+
+body.dark-mode #sidebar {
+    background-color: rgb(32, 35, 37);
+}
+
+body.dark-mode .todo-checkbox {
+    border-color: rgb(140, 130, 115);
+}
+
+body.dark-mode #new-note {
+    background-color: rgb(62, 68, 70);
+    color: #eee;
+    border-color: rgb(82, 88, 90);
+}
+
+body.dark-mode #note-title {
+    background-color: rgb(24, 26, 27);
+    border-color: rgb(62, 68, 70);
+    color: #eee;
+}
+
+body.dark-mode .pin-note {
+    background-color: transparent;
+    color: #eee;
+}
+
+body.dark-mode pre {
+    background-color: rgb(32, 35, 37);
+    color: #eee;
+}
+
+body.dark-mode #note-content {
+    border-color: rgb(62, 68, 70);
+}
+
+body.dark-mode #search-notes {
+    border-color: rgb(62, 68, 70);
+    background-color: rgb(24, 26, 27);
+    color: #eee;
+}
+
+body.dark-mode #note-list li {
+    border-bottom: 1px solid #555555;
+}
+
+body.dark-mode #note-content th, body.dark-mode #note-content td {
+    border-color: #555;
+    background-color: #2a2a2a;
+    color: #ddd;
+}
+
+body.dark-mode #note-content th {
+    background-color: #1a5fb4;
+    border-bottom: 2px solid #144c91;
+}
+
+body.dark-mode #note-content td:hover {
+    background-color: #3a3a3a;
+}
+
+input {
+    outline: none;
+}
+
+body.dark-mode select {
+    outline: none;
+    background-color: transparent;
+    color: #eee;
+}
+
+body.dark-mode option {
+    background-color: rgb(24, 26, 27);
+}
+
+#app {
+    display: flex;
+    flex-grow: 1;
+}
+
+#color-picker {
+    display: none;
+}
+
+#sidebar {
+    width: 250px;
+    background-color: #f0f0f0;
+    padding: 10px;
+    overflow-y: auto;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+#search-notes {
+    width: calc(100% - 12px);
+    padding: 5px;
+    margin-bottom: 10px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    font-size: 1.1rem;
+    font-family: "Vazirmatn", sans-serif;
+}
+
+#note-list {
+    list-style: none;
+    padding: 0;
+    margin-top: 10px;
+}
+
+#new-note {
+    font-size: 1.2rem;
+    cursor: pointer;
+    font-family: "Vazirmatn", sans-serif;
+}
+
+#note-list li {
+    cursor: pointer;
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.delete-note {
+    background: none;
+    border: none;
+    font-size: 1.2em;
+    cursor: pointer;
+    color: #888;
+}
+
+.note-preview {
+    font-size: 0.8em;
+    color: #777;
+    margin: 5px 0 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pin-note {
+    margin-left: 5px;
+    background-color: #eee;
+    border: none;
+    padding: 2px 5px;
+    cursor: pointer;
+    border-radius: 3px;
+}
+
+.pin-note:hover {
+    background-color: #ddd;
+}
+
+.todo-checkbox {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 1px solid #000;
+    border-radius: 50%;
+    cursor: pointer;
+    margin-right: 5px;
+    text-align: center;
+    line-height: 14px;
+    font-size: 12px;
+    flex-shrink: 0;
+}
+
+.todo-checkbox.checked::before {
+    content: "\2713";
+    display: block;
+    text-align: center;
+}
+
+#note-editor {
+    flex-grow: 1;
+    padding: 20px;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+#note-title {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    font-size: 1.2rem;
+    font-family: "Vazirmatn", sans-serif;
+}
+
+#editor-toolbar {
+    margin-bottom: 10px;
+}
+
+#editor-toolbar button {
+    padding: 5px 10px;
+    margin-right: 2px;
+    border: none;
+    cursor: pointer;
+    background-color: cadetblue;
+    transition: all 0.3s ease-in-out;
+    color: #fff;
+    border-radius: 5px;
+}
+
+#editor-toolbar button:hover {
+    background-color: blueviolet;
+}
+
+#note-content {
+    width: 100%;
+    height: calc(100vh - 220px);
+    padding: 10px;
+    margin-bottom: 10px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    font-family: "Vazirmatn", sans-serif;
+    overflow-y: auto;
+    resize: none;
+    outline: none;
+}
+
+pre {
+    background-color: #f0f0f0;
+    padding: 10px;
+    border-radius: 5px;
+    overflow-x: auto;
+    font-family: monospace;
+    white-space: pre-wrap;
+    font-size: 1.2rem;
+}
+
+#save-note {
+    padding: 8px 16px;
+    background-color: #4caf50;
+    border: none;
+    color: white;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 1.2rem;
+    transition: all 0.3s ease;
+    font-family: "Vazirmatn", sans-serif;
+}
+
+#save-note:hover {
+    background-color: #35a539;
+}
+
+#note-content table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+#note-content th, #note-content td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: center;
+    background-color: #fff;
+    transition: background-color 0.3s ease;
+    resize: both;
+    overflow: auto;
+    min-width: 50px;
+    min-height: 30px;
+}
+
+#note-content th {
+    background-color: #4a90e2;
+    color: #fff;
+    font-weight: bold;
+    border-bottom: 2px solid #3a78c2;
+}
+
+#note-content td:hover {
+    background-color: #f5f5f5;
+}
+
+/* استایل پس‌زمینه Modal */
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+/* استایل خود Modal */
+.modal {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+    transform: scale(0.8);
+    opacity: 0;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+/* حالت دارک‌مود برای Modal */
+body.dark-mode .modal {
+    background-color: rgb(32, 35, 37);
+    color: #eee;
+    box-shadow: 0 4px 10px rgba(255, 255, 255, 0.1);
+}
+
+/* آیکون Modal */
+.modal-icon {
+    font-size: 2rem;
+    margin-bottom: 10px;
+}
+
+.modal-icon.success {
+    color: #4caf50;
+}
+
+.modal-icon.error {
+    color: #e74c3c;
+}
+
+/* متن پیام */
+#modal-message {
+    font-size: 1.1rem;
+    margin-bottom: 20px;
+    font-family: "Vazirmatn", sans-serif;
+}
+
+/* دکمه بستن */
+.modal-close-btn {
+    padding: 8px 16px;
+    background-color: #4caf50;
+    border: none;
+    color: white;
+    border-radius: 5px;
+    cursor: pointer;
+    font-family: "Vazirmatn", sans-serif;
+    transition: background-color 0.3s ease;
+}
+
+.modal-close-btn:hover {
+    background-color: #35a539;
+}
+
+body.dark-mode .modal-close-btn {
+    background-color: #35a539;
+}
+
+body.dark-mode .modal-close-btn:hover {
+    background-color: #4caf50;
+}
+
+/* انیمیشن باز شدن */
+.modal-backdrop.show {
+    opacity: 1;
+}
+
+.modal.show {
+    transform: scale(1);
+    opacity: 1;
+    animation: pulse 0.5s ease;
+}
+
+/* انیمیشن بسته شدن */
+.modal-backdrop.hide {
+    opacity: 0;
+}
+
+.modal.hide {
+    transform: scale(0.8);
+    opacity: 0;
+}
+
+/* انیمیشن Pulse */
+@keyframes pulse {
+    0% {
+        transform: scale(0.8);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
