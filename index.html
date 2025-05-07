@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Note Pad Pro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="app">
+        <div id="sidebar">
+            <input type="text" id="search-notes" placeholder="جستجو در یادداشت‌ها">
+            <button id="new-note">یادداشت جدید</button>
+            <ul id="note-list"></ul>
+        </div>
+        <div id="note-editor">
+            <input type="text" id="note-title" placeholder="عنوان یادداشت">
+            <div id="editor-toolbar">
+                <button id="bold-btn" title="Bold"><b>B</b></button>
+                <button id="italic-btn" title="Italic"><i>I</i></button>
+                <button id="underline-btn" title="Underline"><u>U</u></button>
+                <button id="insert-unordered-list" title="UnOrdered list">UL</button>
+                <button id="insert-ordered-list" title="Ordered list">OL</button>
+                <button id="code-block-btn" title="code blocks">Code</button>
+                <button id="rtl-ltr-btn" title="تغییر جهت متن">RTL/LTR</button>
+                <button id="todo-btn">TODO</button>
+                <button id="color-btn">Color</button>
+                <button id="hr-btn">HR</button>
+                <button id="theme-btn" title="تغییر تم">Theme</button>
+                <button id="insert-table-btn">Table</button>
+                <button id="add-row-btn" title="افزودن سطر برای جدول">Add Row</button>
+                <button id="add-column-btn" title="افزودن ستون برای جدول">Add Column</button>
+                <button id="export-notes-btn" title="خروجی گرفتن از یادداشت‌ها">Export</button>
+                <button id="import-notes-btn" title="وارد کردن یادداشت‌ها">Import</button>
+                <input type="file" id="import-file-input" style="display: none;" accept=".json">
+                <select id="font-size-select">
+                    <option value="">Select Size</option>
+                    <option value="8px">8px</option>
+                    <option value="10px">10px</option>
+                    <option value="12px">12px</option>
+                    <option value="14px">14px</option>
+                    <option value="16px">16px</option>
+                    <option value="18px">18px</option>
+                    <option value="20px">20px</option>
+                    <option value="24px">24px</option>
+                    <option value="32px">32px</option>
+                    <option value="48px">48px</option>
+                    <option value="64px">64px</option>
+                </select>
+                <input type="color" id="color-picker">
+            </div>
+            <div id="note-content" contenteditable="true"></div>
+            <button id="save-note">ذخیره یادداشت</button>
+        </div>
+    </div>
+
+    <div id="custom-modal" class="modal-backdrop" style="display: none;">
+        <div class="modal">
+            <div class="modal-icon"></div>
+            <p id="modal-message"></p>
+            <button id="modal-close-btn" class="modal-close-btn">بستن</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
