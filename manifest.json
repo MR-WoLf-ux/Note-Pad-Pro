@@ -1,0 +1,16 @@
+{
+    "name": "Note Pad Pro",
+    "short_name": "Note Pad",
+    "start_url": "index.html",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#000000",
+    "scope": "/",
+    "icons": [
+        {
+            "src": "pencil.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}
