@@ -1,11 +1,14 @@
-body {
+* {
     font-family: "Vazirmatn";
+}
+
+body {
     margin: 0;
     background-color: #fff;
     display: flex;
     min-height: 100vh;
     direction: rtl;
-    transition: background-color 0.3s ease, color 0.3s ease;
+    transition: background-color 0.5s ease, color 0.5s ease;
 }
 
 body.dark-mode {
@@ -77,6 +80,12 @@ body.dark-mode #note-content td:hover {
     background-color: #3a3a3a;
 }
 
+body.dark-mode #toggle-sidebar-btn {
+    background-color: rgb(62, 68, 70);
+    color: #eee;
+    border-color: rgb(82, 88, 90);
+}
+
 input {
     outline: none;
 }
@@ -105,17 +114,32 @@ body.dark-mode option {
     background-color: #f0f0f0;
     padding: 10px;
     overflow-y: auto;
-    transition: background-color 0.3s ease, border-color 0.3s ease;
+    transition: transform 0.4s ease, background-color 0.5s ease, border-color 0.5s ease, width 0.4s ease;
+    position: relative;
+}
+
+#sidebar.hidden {
+    transform: translateX(100%);
+    width: 0;
+    padding: 0;
+    overflow: hidden;
 }
 
 #search-notes {
     width: calc(100% - 12px);
-    padding: 5px;
+    padding: 8px;
     margin-bottom: 10px;
     box-sizing: border-box;
     border: 1px solid #ccc;
     font-size: 1.1rem;
     font-family: "Vazirmatn", sans-serif;
+    border-radius: 5px;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+#search-notes:focus {
+    border-color: #4a90e2;
+    box-shadow: 0 0 5px rgba(74, 144, 226, 0.5);
 }
 
 #note-list {
@@ -128,6 +152,17 @@ body.dark-mode option {
     font-size: 1.2rem;
     cursor: pointer;
     font-family: "Vazirmatn", sans-serif;
+    width: 70%;
+    padding: 3px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: #4caf50;
+    color: white;
+    transition: transform 0.2s ease, background-color 0.3s ease;
+}
+
+#new-note:hover {
+    background-color: #35a539;
 }
 
 #note-list li {
@@ -137,6 +172,17 @@ body.dark-mode option {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    opacity: 0;
+    transform: translateX(20px);
+    animation: slideIn 0.3s ease forwards;
+    animation-delay: calc(0.1s * var(--index));
+}
+
+@keyframes slideIn {
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
 }
 
 .delete-note {
@@ -145,6 +191,12 @@ body.dark-mode option {
     font-size: 1.2em;
     cursor: pointer;
     color: #888;
+    transition: color 0.3s ease, transform 0.2s ease;
+}
+
+.delete-note:hover {
+    color: #e74c3c;
+    transform: scale(1.2);
 }
 
 .note-preview {
@@ -163,10 +215,12 @@ body.dark-mode option {
     padding: 2px 5px;
     cursor: pointer;
     border-radius: 3px;
+    transition: background-color 0.3s ease, transform 0.2s ease;
 }
 
 .pin-note:hover {
     background-color: #ddd;
+    transform: scale(1.1);
 }
 
 .todo-checkbox {
@@ -181,6 +235,13 @@ body.dark-mode option {
     line-height: 14px;
     font-size: 12px;
     flex-shrink: 0;
+    transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.todo-checkbox.checked {
+    background-color: #4caf50;
+    color: white;
+    transform: scale(1.1);
 }
 
 .todo-checkbox.checked::before {
@@ -192,7 +253,7 @@ body.dark-mode option {
 #note-editor {
     flex-grow: 1;
     padding: 20px;
-    transition: background-color 0.3s ease, border-color 0.3s ease;
+    transition: background-color 0.5s ease, border-color 0.5s ease, width 0.4s ease;
 }
 
 #note-title {
@@ -203,25 +264,49 @@ body.dark-mode option {
     border: 1px solid #ccc;
     font-size: 1.2rem;
     font-family: "Vazirmatn", sans-serif;
+    border-radius: 5px;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+#note-title:focus {
+    border-color: #4a90e2;
+    box-shadow: 0 0 5px rgba(74, 144, 226, 0.5);
 }
 
 #editor-toolbar {
     margin-bottom: 10px;
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
 }
 
 #editor-toolbar button {
-    padding: 5px 10px;
+    padding: 3px 12px;
     margin-right: 2px;
     border: none;
     cursor: pointer;
-    background-color: cadetblue;
-    transition: all 0.3s ease-in-out;
+    background-color: #4a90e2;
     color: #fff;
     border-radius: 5px;
+    font-family: "Vazirmatn", sans-serif;
+    transition: transform 0.2s ease, background-color 0.3s ease, box-shadow 0.3s ease;
+    opacity: 0;
+    transform: translateY(10px);
+    animation: toolbarFadeIn 0.3s ease forwards;
+    animation-delay: calc(0.05s * var(--index));
+}
+
+@keyframes toolbarFadeIn {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 #editor-toolbar button:hover {
-    background-color: blueviolet;
+    background-color: #357ab8;
+    transform: scale(1.05);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
 #note-content {
@@ -235,6 +320,13 @@ body.dark-mode option {
     overflow-y: auto;
     resize: none;
     outline: none;
+    border-radius: 5px;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+#note-content:focus {
+    border-color: #4a90e2;
+    box-shadow: 0 0 5px rgba(74, 144, 226, 0.5);
 }
 
 pre {
@@ -259,12 +351,36 @@ pre {
     cursor: pointer;
     border-radius: 4px;
     font-size: 1.2rem;
-    transition: all 0.3s ease;
-    font-family: "Vazirmatn", sans-serif;
+    transition: transform 0.2s ease, background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 #save-note:hover {
+    background-color: #3d833f;
+}
+
+#note-footer {
+    display: flex;
+    gap: 10px;
+}
+
+#toggle-sidebar-btn {
+    padding: 8px 16px;
+    background-color: #4caf50;
+    border: none;
+    color: white;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 1.2rem;
+    transition: transform 0.2s ease, background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+#toggle-sidebar-btn:hover {
     background-color: #35a539;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
 #note-content table {
@@ -277,12 +393,23 @@ pre {
     overflow: hidden;
 }
 
+#note-content tr {
+    opacity: 0;
+    animation: tableRowFadeIn 0.3s ease forwards;
+}
+
+@keyframes tableRowFadeIn {
+    to {
+        opacity: 1;
+    }
+}
+
 #note-content th, #note-content td {
     border: 1px solid #ddd;
     padding: 10px;
     text-align: center;
     background-color: #fff;
-    transition: background-color 0.3s ease;
+    transition: background-color 0.3s ease, transform 0.2s ease;
     resize: both;
     overflow: auto;
     min-width: 50px;
@@ -298,9 +425,9 @@ pre {
 
 #note-content td:hover {
     background-color: #f5f5f5;
+    transform: scale(1.02);
 }
 
-/* استایل پس‌زمینه Modal */
 .modal-backdrop {
     position: fixed;
     top: 0;
@@ -313,76 +440,146 @@ pre {
     justify-content: center;
     align-items: center;
     opacity: 0;
-    transition: opacity 0.3s ease;
+    transition: opacity 0.4s ease;
 }
 
-/* استایل خود Modal */
 .modal {
     background-color: #fff;
     padding: 20px;
     border-radius: 10px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
     max-width: 400px;
     width: 90%;
     text-align: center;
-    transform: scale(0.8);
+    transform: scale(0.7);
     opacity: 0;
-    transition: transform 0.3s ease, opacity 0.3s ease;
+    transition: transform 0.4s ease, opacity 0.4s ease, box-shadow 0.4s ease;
 }
 
-/* حالت دارک‌مود برای Modal */
 body.dark-mode .modal {
     background-color: rgb(32, 35, 37);
     color: #eee;
-    box-shadow: 0 4px 10px rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 15px rgba(255, 255, 255, 0.2);
 }
 
-/* آیکون Modal */
 .modal-icon {
     font-size: 2rem;
     margin-bottom: 10px;
+    transition: transform 0.3s ease;
 }
 
-.modal-icon.success {
+.modal-icon.success::before {
+    content: "\2713";
     color: #4caf50;
 }
 
-.modal-icon.error {
+.modal-icon.error::before {
+    content: "\2717";
     color: #e74c3c;
 }
 
-/* متن پیام */
+.modal-icon.question::before {
+    content: "\003F";
+    color: #f1c40f;
+}
+
+.modal-icon.success, .modal-icon.error, .modal-icon.question {
+    display: inline-block;
+}
+
 #modal-message {
     font-size: 1.1rem;
     margin-bottom: 20px;
     font-family: "Vazirmatn", sans-serif;
 }
 
-/* دکمه بستن */
-.modal-close-btn {
+#modal-form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#modal-form label {
+    font-size: 1rem;
+    margin: 5px 0;
+    font-family: "Vazirmatn", sans-serif;
+}
+
+#modal-form input[type="number"] {
+    width: 100px;
+    padding: 5px;
+    margin: 5px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-family: "Vazirmatn", sans-serif;
+    font-size: 1rem;
+    text-align: center;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+#modal-form input[type="number"]:focus {
+    border-color: #4a90e2;
+    box-shadow: 0 0 5px rgba(74, 144, 226, 0.5);
+}
+
+body.dark-mode #modal-form input[type="number"] {
+    background-color: rgb(24, 26, 27);
+    color: #eee;
+    border-color: rgb(62, 68, 70);
+}
+
+.modal-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}
+
+.modal-close-btn, .modal-confirm-btn, .modal-cancel-btn {
     padding: 8px 16px;
-    background-color: #4caf50;
     border: none;
     color: white;
     border-radius: 5px;
     cursor: pointer;
     font-family: "Vazirmatn", sans-serif;
-    transition: background-color 0.3s ease;
+    transition: transform 0.2s ease, background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
-.modal-close-btn:hover {
-    background-color: #35a539;
-}
-
-body.dark-mode .modal-close-btn {
-    background-color: #35a539;
-}
-
-body.dark-mode .modal-close-btn:hover {
+.modal-close-btn, .modal-confirm-btn {
     background-color: #4caf50;
 }
 
-/* انیمیشن باز شدن */
+.modal-close-btn:hover, .modal-confirm-btn:hover {
+    background-color: #35a539;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.modal-cancel-btn {
+    background-color: #e74c3c;
+}
+
+.modal-cancel-btn:hover {
+    background-color: #c0392b;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+body.dark-mode .modal-close-btn, body.dark-mode .modal-confirm-btn {
+    background-color: #35a539;
+}
+
+body.dark-mode .modal-close-btn:hover, body.dark-mode .modal-confirm-btn:hover {
+    background-color: #4caf50;
+    box-shadow: 0 2px 5px rgba(255, 255, 255, 0.2);
+}
+
+body.dark-mode .modal-cancel-btn {
+    background-color: #c0392b;
+}
+
+body.dark-mode .modal-cancel-btn:hover {
+    background-color: #e74c3c;
+    box-shadow: 0 2px 5px rgba(255, 255, 255, 0.2);
+}
+
 .modal-backdrop.show {
     opacity: 1;
 }
@@ -390,28 +587,29 @@ body.dark-mode .modal-close-btn:hover {
 .modal.show {
     transform: scale(1);
     opacity: 1;
-    animation: pulse 0.5s ease;
+    animation: bounceIn 0.5s ease;
 }
 
-/* انیمیشن بسته شدن */
 .modal-backdrop.hide {
     opacity: 0;
 }
 
 .modal.hide {
-    transform: scale(0.8);
+    transform: scale(0.7);
     opacity: 0;
 }
 
-/* انیمیشن Pulse */
-@keyframes pulse {
+@keyframes bounceIn {
     0% {
-        transform: scale(0.8);
+        transform: scale(0.7);
+        opacity: 0;
     }
     50% {
-        transform: scale(1.05);
+        transform: scale(1.1);
+        opacity: 1;
     }
     100% {
         transform: scale(1);
+        opacity: 1;
     }
 }
