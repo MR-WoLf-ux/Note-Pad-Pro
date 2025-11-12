@@ -3,7 +3,7 @@ const urlsToCache = [
     'index.html',
     'style.css',
     'script.js',
-    'https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap',    
+    'https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap'
 ];
 
 self.addEventListener('install', event => {
