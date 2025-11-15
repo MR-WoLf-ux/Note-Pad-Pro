@@ -3,7 +3,6 @@ const body = $.body;
 const themeBtn = $.getElementById("theme-btn");
 const newNoteBtn = $.getElementById("new-note");
 const noteList = $.getElementById("note-list");
-const todoBtn = $.getElementById("todo-btn");
 const insertTableBtn = $.getElementById("insert-table-btn");
 const addRowBtn = $.getElementById("add-row-btn");
 const addColumnBtn = $.getElementById("add-column-btn");
@@ -20,7 +19,6 @@ const italicBtn = $.getElementById("italic-btn");
 const underlineBtn = $.getElementById("underline-btn");
 const insertUnorderedListBtn = $.getElementById("insert-unordered-list");
 const insertOrderedListBtn = $.getElementById("insert-ordered-list");
-const codeBlockBtn = $.getElementById("code-block-btn");
 const rtlLtrBtn = $.getElementById("rtl-ltr-btn");
 const exportNotesBtn = $.getElementById("export-notes-btn");
 const importNotesBtn = $.getElementById("import-notes-btn");
@@ -38,25 +36,102 @@ const toggleSidebarBtn = $.getElementById("toggle-sidebar-btn");
 const sidebar = $.getElementById("sidebar");
 const noteEditor = $.getElementById("note-editor");
 
-let notes = JSON.parse(localStorage.getItem("notes")) || [];
+let notes = [];
 let currentNoteIndex = -1;
+let db;
+let autoSaveTimeout;
 
-// تابع نمایش Modal
+// ——————————————————————————
+// IndexedDB Setup
+// ——————————————————————————
+const DB_NAME = "NotePadProDB";
+const DB_VERSION = 1;
+const STORE_NAME = "notes";
+
+function openDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+            db = request.result;
+            resolve(db);
+        };
+
+        request.onupgradeneeded = (event) => {
+            db = event.target.result;
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+                const store = db.createObjectStore(STORE_NAME, {
+                    keyPath: "id",
+                    autoIncrement: true,
+                });
+                store.createIndex("title", "title", { unique: false });
+                store.createIndex("lastEdited", "lastEdited", {
+                    unique: false,
+                });
+                store.createIndex("pinned", "pinned", { unique: false });
+            }
+        };
+    });
+}
+
+// ——————————————————————————
+// CRUD Operations
+// ——————————————————————————
+async function getAllNotes() {
+    const tx = db.transaction(STORE_NAME, "readonly");
+    const store = tx.objectStore(STORE_NAME);
+    return new Promise((resolve) => {
+        const request = store.getAll();
+        request.onsuccess = () => resolve(request.result);
+    });
+}
+
+async function addNote(note) {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const store = tx.objectStore(STORE_NAME);
+    return new Promise((resolve) => {
+        const request = store.add(note);
+        request.onsuccess = () => resolve(request.result);
+    });
+}
+
+async function updateNote(note) {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const store = tx.objectStore(STORE_NAME);
+    return new Promise((resolve) => {
+        const request = store.put(note);
+        request.onsuccess = () => resolve();
+    });
+}
+
+async function deleteNote(id) {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const store = tx.objectStore(STORE_NAME);
+    return new Promise((resolve) => {
+        store.delete(id);
+        tx.oncomplete = resolve;
+    });
+}
+
+// ——————————————————————————
+// Modal Functions
+// ——————————————————————————
 function showCustomModal(message, type = "success", onConfirm = null) {
     modalMessage.textContent = message;
     modalIcon.className = "modal-icon";
-    modalCloseBtn.style.display = type === "confirm" || type === "form" ? "none" : "inline-block";
-    modalConfirmBtn.style.display = type === "confirm" || type === "form" ? "inline-block" : "none";
-    modalCancelBtn.style.display = type === "confirm" || type === "form" ? "inline-block" : "none";
+    modalCloseBtn.style.display =
+        type === "confirm" || type === "form" ? "none" : "inline-block";
+    modalConfirmBtn.style.display =
+        type === "confirm" || type === "form" ? "inline-block" : "none";
+    modalCancelBtn.style.display =
+        type === "confirm" || type === "form" ? "inline-block" : "none";
     modalForm.style.display = type === "form" ? "block" : "none";
 
-    if (type === "success") {
-        modalIcon.classList.add("success");
-    } else if (type === "error") {
-        modalIcon.classList.add("error");
-    } else if (type === "confirm" || type === "form") {
+    if (type === "success") modalIcon.classList.add("success");
+    else if (type === "error") modalIcon.classList.add("error");
+    else if (type === "confirm" || type === "form")
         modalIcon.classList.add("question");
-    }
 
     customModal.style.display = "flex";
     customModal.classList.remove("hide");
@@ -65,9 +140,7 @@ function showCustomModal(message, type = "success", onConfirm = null) {
     customModal.querySelector(".modal").classList.add("show");
 
     if (type === "success") {
-        setTimeout(() => {
-            closeCustomModal();
-        }, 3000);
+        setTimeout(closeCustomModal, 3000);
     }
 
     if ((type === "confirm" || type === "form") && onConfirm) {
@@ -85,7 +158,6 @@ function showCustomModal(message, type = "success", onConfirm = null) {
     }
 }
 
-// تابع بستن Modal
 function closeCustomModal() {
     customModal.classList.remove("show");
     customModal.classList.add("hide");
@@ -97,78 +169,106 @@ function closeCustomModal() {
     });
 }
 
-// بستن Modal با دکمه
 modalCloseBtn.addEventListener("click", closeCustomModal);
-
-// بستن Modal با کلید Esc
-$.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && customModal.style.display === "flex") {
+document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && customModal.style.display === "flex")
         closeCustomModal();
-    }
 });
 
-const savedTheme = localStorage.getItem("theme");
-if (savedTheme === "dark") {
-    body.classList.add("dark-mode");
-}
+// ——————————————————————————
+// App Initialization
+// ——————————————————————————
+async function initApp() {
+    try {
+        await openDB();
+        notes = await getAllNotes();
 
-notes = notes.map((note) => ({ ...note, pinned: note.pinned || false }));
-saveNotes();
+        // مهاجرت از localStorage اگر وجود داشته باشد
+        const localNotes = localStorage.getItem("notes");
+        if (localNotes && !notes.length) {
+            try {
+                const oldNotes = JSON.parse(localNotes);
+                for (const note of oldNotes) {
+                    const id = await addNote(note);
+                    note.id = id;
+                }
+                notes = await getAllNotes();
+                localStorage.removeItem("notes");
+                showCustomModal(
+                    "داده‌های قدیمی به IndexedDB منتقل شد.",
+                    "success"
+                );
+            } catch (e) {
+                console.warn("خطا در مهاجرت از localStorage:", e);
+            }
+        }
 
-function saveNotes() {
-    if (currentNoteIndex !== -1) {
-        notes[currentNoteIndex].title = noteTitle.value;
-        notes[currentNoteIndex].content = noteContent.innerHTML;
-        notes[currentNoteIndex].lastEdited = new Date().getTime();
+        renderNotes();
+        loadNote();
+    } catch (err) {
+        showCustomModal("خطا در اتصال به دیتابیس: " + err.message, "error");
+        console.error("IndexedDB Error:", err);
     }
-    localStorage.setItem("notes", JSON.stringify(notes));
-    renderNotes();
 }
 
-function renderNotes(notesToRender = notes) {
+// ——————————————————————————
+// Save & Render Functions
+// ——————————————————————————
+async function saveNotes() {
+    if (currentNoteIndex === -1) return;
+    const note = notes[currentNoteIndex];
+    note.title = noteTitle.value;
+    note.content = noteContent.innerHTML;
+    note.lastEdited = Date.now();
+    await updateNote(note);
+    // بدون renderNotes → فقط ذخیره
+}
+
+async function renderNotes(notesToRender = notes) {
     noteList.innerHTML = "";
     const sortedNotes = [...notesToRender].sort((a, b) => b.pinned - a.pinned);
+
     sortedNotes.forEach((note, index) => {
-        const li = $.createElement("li");
-        li.style.setProperty('--index', index); // برای انیمیشن‌های تأخیری
+        const li = document.createElement("li");
+        li.style.setProperty("--index", index);
+
         let wordCount = note.content
             ? note.content
                   .replace(/<[^>]*>/g, "")
                   .split(/\s+/)
-                  .filter((word) => word !== "").length
+                  .filter((w) => w).length
             : 0;
         let preview = `تعداد کلمات: ${wordCount}`;
+
         if (wordCount > 50) {
-            preview += `<br>${
-                note.content
-                    ? note.content.replace(/<[^>]*>/g, "").substring(0, 100) +
-                      "..."
-                    : ""
-            }`;
+            preview += `<br>${note.content
+                .replace(/<[^>]*>/g, "")
+                .substring(0, 100)}...`;
         }
         if (note.lastEdited) {
-            let lastEdited = new Date(note.lastEdited).toLocaleDateString(
-                "fa-IR"
-            );
-            preview += `<br>آخرین ویرایش: ${lastEdited}`;
+            preview += `<br>آخرین ویرایش: ${new Date(
+                note.lastEdited
+            ).toLocaleDateString("fa-IR")}`;
         }
-        const noteText = $.createElement("span");
+
+        const noteText = document.createElement("span");
         noteText.innerHTML = `<b>${note.title || "یادداشت بدون عنوان"}</b>`;
-        const notePreview = $.createElement("p");
+
+        const notePreview = document.createElement("p");
         notePreview.className = "note-preview";
         notePreview.innerHTML = preview;
-        const deleteButton = $.createElement("button");
+
+        const deleteButton = document.createElement("button");
         deleteButton.className = "delete-note";
-        deleteButton.dataset.index = index;
         deleteButton.textContent = "×";
-        deleteButton.addEventListener("click", (event) => {
-            event.stopPropagation();
-            const indexToDelete = parseInt(event.target.dataset.index);
-            const originalIndex = notes.indexOf(sortedNotes[indexToDelete]);
+        deleteButton.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const originalIndex = notes.indexOf(note);
             showCustomModal(
                 "آیا مطمئن به حذف این یادداشت هستید؟",
                 "confirm",
-                () => {
+                async () => {
+                    await deleteNote(note.id);
                     notes.splice(originalIndex, 1);
                     if (currentNoteIndex === originalIndex) {
                         currentNoteIndex = -1;
@@ -176,65 +276,42 @@ function renderNotes(notesToRender = notes) {
                     } else if (currentNoteIndex > originalIndex) {
                         currentNoteIndex--;
                     }
-                    saveNotes();
+                    renderNotes();
                 }
             );
         });
-        const pinButton = $.createElement("button");
+
+        const pinButton = document.createElement("button");
         pinButton.className = "pin-note";
         pinButton.textContent = note.pinned ? "Unpin" : "Pin";
-        pinButton.addEventListener("click", (event) => {
-            event.stopPropagation();
+        pinButton.addEventListener("click", (e) => {
+            e.stopPropagation();
             note.pinned = !note.pinned;
-            saveNotes();
+            updateNote(note).then(() => renderNotes());
         });
-        li.dataset.originalIndex = notes.indexOf(note);
+
+        li.dataset.noteId = note.id;
         li.appendChild(pinButton);
         li.appendChild(noteText);
         li.appendChild(notePreview);
         li.appendChild(deleteButton);
+
         li.addEventListener("click", () => {
-            currentNoteIndex = parseInt(li.dataset.originalIndex);
+            currentNoteIndex = notes.indexOf(note);
             loadNote();
             li.classList.add("selected");
             setTimeout(() => li.classList.remove("selected"), 300);
         });
+
         noteList.appendChild(li);
     });
 }
 
-function insertHtmlAtCursor(html) {
-    let range, selection;
-    if ($.createRange) {
-        selection = window.getSelection();
-        noteContent.focus();
-        selection.removeAllRanges();
-        range = $.createRange();
-        range.selectNodeContents(noteContent);
-        range.collapse(false);
-        selection.addRange(range);
-
-        if (selection.getRangeAt && selection.rangeCount) {
-            range = selection.getRangeAt(0);
-            range.deleteContents();
-            let tempDiv = $.createElement("div");
-            tempDiv.innerHTML = html;
-            let fragment = $.create$Fragment();
-            let node;
-            while ((node = tempDiv.firstChild)) {
-                fragment.appendChild(node);
-            }
-            range.insertNode(fragment);
-        }
-    } else if ($.selection && $.selection.createRange) {
-        $.selection.createRange().pasteHTML(html);
-    }
-}
-
 function loadNote() {
-    if (currentNoteIndex !== -1) {
-        noteTitle.value = notes[currentNoteIndex].title;
-        noteContent.innerHTML = notes[currentNoteIndex].content;
+    if (currentNoteIndex !== -1 && notes[currentNoteIndex]) {
+        const note = notes[currentNoteIndex];
+        noteTitle.value = note.title || "";
+        noteContent.innerHTML = note.content || "";
         noteContent.classList.add("fade-in");
         setTimeout(() => noteContent.classList.remove("fade-in"), 300);
     } else {
@@ -243,98 +320,56 @@ function loadNote() {
     }
 }
 
-function surroundSelection(tag) {
-    $.execCommand(tag, false, null);
+// ——————————————————————————
+// Editor Tools
+// ——————————————————————————
+function placeCursorAtEnd(element) {
+    const range = document.createRange();
+    const selection = window.getSelection();
+    range.selectNodeContents(element);
+    range.collapse(false);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    element.focus();
 }
 
-boldBtn.addEventListener("click", () => surroundSelection("bold"));
-italicBtn.addEventListener("click", () => surroundSelection("italic"));
-underlineBtn.addEventListener("click", () => surroundSelection("underline"));
-insertUnorderedListBtn.addEventListener("click", () => surroundSelection("insertUnorderedList"));
-insertOrderedListBtn.addEventListener("click", () => surroundSelection("insertOrderedList"));
-
-$.addEventListener("keydown", (event) => {
-    if (event.ctrlKey && event.shiftKey && event.key === "C") {
-        $.execCommand("formatBlock", false, "pre");
+function insertHtmlAtCursor(html) {
+    if (document.activeElement !== noteContent) {
+        noteContent.focus();
     }
-});
 
-codeBlockBtn.addEventListener("click", () => {
     const selection = window.getSelection();
-    if (!selection.rangeCount) return;
-    const range = selection.getRangeAt(0);
-    const selectedText = range.toString();
-    if (selectedText) {
-        const pre = $.createElement("pre");
-        pre.textContent = selectedText;
-        pre.classList.add("fade-in");
-        range.deleteContents();
-        range.insertNode(pre);
-        setTimeout(() => pre.classList.remove("fade-in"), 300);
-        saveNotes();
+    let range;
+
+    if (selection.rangeCount > 0) {
+        range = selection.getRangeAt(0);
     } else {
-        const pre = $.createElement("pre");
-        pre.classList.add("fade-in");
-        noteContent.appendChild(pre);
-        pre.focus();
-        setTimeout(() => pre.classList.remove("fade-in"), 300);
-        saveNotes();
+        range = document.createRange();
+        range.selectNodeContents(noteContent);
+        range.collapse(false);
+        selection.removeAllRanges();
+        selection.addRange(range);
     }
-});
 
-rtlLtrBtn.addEventListener("click", () => {
-    noteContent.style.direction =
-        noteContent.style.direction === "rtl" ? "ltr" : "rtl";
-    noteContent.classList.add("fade-in");
-    setTimeout(() => noteContent.classList.remove("fade-in"), 300);
+    range.deleteContents();
+
+    const tempDiv = document.createElement("div");
+    tempDiv.innerHTML = html;
+    const fragment = document.createDocumentFragment();
+    let node;
+    while ((node = tempDiv.firstChild)) {
+        fragment.appendChild(node);
+    }
+
+    range.insertNode(fragment);
+    range.collapse(false);
+    selection.removeAllRanges();
+    selection.addRange(range);
+
     saveNotes();
-});
+}
 
-newNoteBtn.addEventListener("click", () => {
-    if (currentNoteIndex !== -1) {
-        notes[currentNoteIndex].title = noteTitle.value;
-        notes[currentNoteIndex].content = noteContent.innerHTML;
-        notes[currentNoteIndex].lastEdited = new Date().getTime();
-    }
-    notes.push({ title: "", content: "", lastEdited: new Date().getTime(), pinned: false });
-    currentNoteIndex = notes.length - 1;
-    localStorage.setItem("notes", JSON.stringify(notes));
-    renderNotes();
-    loadNote();
-});
-
-insertTableBtn.addEventListener("click", () => {
-    showCustomModal(
-        "لطفاً تعداد سطرها و ستون‌های جدول را وارد کنید:",
-        "form",
-        () => {
-            const rows = parseInt(tableRowsInput.value);
-            const cols = parseInt(tableColsInput.value);
-            if (isNaN(rows) || isNaN(cols) || rows <= 0 || cols <= 0) {
-                showCustomModal("لطفاً اعداد صحیح و بزرگتر از صفر وارد کنید.", "error");
-                return;
-            }
-            let tableHTML = "<table style='width: 100%; border-collapse: separate; border-spacing: 0;'>";
-            for (let i = 0; i < rows; i++) {
-                tableHTML += "<tr>";
-                for (let j = 0; j < cols; j++) {
-                    if (i === 0) {
-                        tableHTML += `<th style='border: 1px solid #ddd; padding: 10px; text-align: center;'>سربرگ ${j + 1}</th>`;
-                    } else {
-                        tableHTML += "<td style='border: 1px solid #ddd; padding: 10px; text-align: center;'></td>";
-                    }
-                }
-                tableHTML += "</tr>";
-            }
-            tableHTML += "</table>";
-            insertHtmlAtCursor(tableHTML);
-            saveNotes();
-        }
-    );
-    tableRowsInput.value = "3";
-    tableColsInput.value = "3";
-});
-
+// Table functions
 function getSelectedTable() {
     const selection = window.getSelection();
     if (!selection.rangeCount) return null;
@@ -357,82 +392,189 @@ function getSelectedRow() {
     return node;
 }
 
-$.addEventListener("keydown", (event) => {
-    if (event.key === "Delete") {
-        const row = getSelectedRow();
-        if (row) {
-            const table = row.parentElement.parentElement;
-            if (table.rows.length > 1) {
-                row.classList.add("fade-out");
-                setTimeout(() => {
-                    row.remove();
-                    saveNotes();
-                }, 300);
-            } else {
-                showCustomModal("نمی‌توانید آخرین سطر جدول را حذف کنید.", "error");
-            }
-        }
-    }
+// ——————————————————————————
+// Event Listeners
+// ——————————————————————————
+boldBtn.addEventListener("click", () =>
+    document.execCommand("bold", false, null)
+);
+italicBtn.addEventListener("click", () =>
+    document.execCommand("italic", false, null)
+);
+underlineBtn.addEventListener("click", () =>
+    document.execCommand("underline", false, null)
+);
+insertUnorderedListBtn.addEventListener("click", () =>
+    document.execCommand("insertUnorderedList", false, null)
+);
+insertOrderedListBtn.addEventListener("click", () =>
+    document.execCommand("insertOrderedList", false, null)
+);
+
+rtlLtrBtn.addEventListener("click", () => {
+    noteContent.style.direction =
+        noteContent.style.direction === "rtl" ? "ltr" : "rtl";
+    noteContent.classList.add("fade-in");
+    setTimeout(() => noteContent.classList.remove("fade-in"), 300);
+    saveNotes();
 });
 
-addRowBtn.addEventListener("click", () => {
+newNoteBtn.addEventListener("click", async () => {
+    if (currentNoteIndex !== -1) await saveNotes();
+
+    const newNote = {
+        title: "",
+        content: "",
+        lastEdited: Date.now(),
+        pinned: false,
+    };
+
+    const id = await addNote(newNote);
+    newNote.id = id;
+    notes.push(newNote);
+    currentNoteIndex = notes.length - 1;
+    renderNotes();
+    loadNote();
+});
+
+insertTableBtn.addEventListener("click", () => {
+    showCustomModal(
+        "لطفاً تعداد سطرها و ستون‌های جدول را وارد کنید:",
+        "form",
+        () => {
+            const rows = parseInt(tableRowsInput.value);
+            const cols = parseInt(tableColsInput.value);
+
+            if (isNaN(rows) || isNaN(cols) || rows <= 0 || cols <= 0) {
+                showCustomModal(
+                    "لطفاً اعداد صحیح و بزرگتر از صفر وارد کنید.",
+                    "error"
+                );
+                return;
+            }
+
+            let tableHTML = "<table class='note-table'>";
+            for (let i = 0; i < rows; i++) {
+                tableHTML += "<tr>";
+                for (let j = 0; j < cols; j++) {
+                    if (i === 0) {
+                        tableHTML += `<th>سربرگ ${j + 1}</th>`;
+                    } else {
+                        tableHTML += "<td contenteditable='true'></td>";
+                    }
+                }
+                tableHTML += "</tr>";
+            }
+            tableHTML += "</table><p><br></p>";
+
+            noteContent.focus();
+
+            const range = document.createRange();
+            const selection = window.getSelection();
+            range.selectNodeContents(noteContent);
+            range.collapse(false);
+            selection.removeAllRanges();
+            selection.addRange(range);
+
+            insertHtmlAtCursor(tableHTML);
+        }
+    );
+
+    tableRowsInput.value = "3";
+    tableColsInput.value = "3";
+});
+
+addRowBtn.addEventListener("click", async () => {
     const table = getSelectedTable();
     if (!table) {
         showCustomModal("لطفاً ابتدا روی یک جدول کلیک کنید.", "error");
         return;
     }
+
     const rowCount = table.rows.length;
     const colCount = table.rows[0].cells.length;
     const newRow = table.insertRow(-1);
     newRow.classList.add("fade-in");
+
     for (let i = 0; i < colCount; i++) {
         const newCell = newRow.insertCell(-1);
-        newCell.style.border = "1px solid #ddd";
-        newCell.style.padding = "10px";
-        newCell.style.textAlign = "center";
+
+        newCell.contentEditable = true;
         newCell.textContent = "";
+
+        if (i === 0 && rowCount === 0) {
+            newCell.tagName = "TH";
+            newCell.className = "note-table-th";
+        } else {
+            newCell.className = "note-table-td";
+        }
     }
+
     setTimeout(() => newRow.classList.remove("fade-in"), 300);
-    saveNotes();
+    await saveNotes();
 });
 
-addColumnBtn.addEventListener("click", () => {
+addColumnBtn.addEventListener("click", async () => {
     const table = getSelectedTable();
     if (!table) {
         showCustomModal("لطفاً ابتدا روی یک جدول کلیک کنید.", "error");
         return;
     }
+
     const rowCount = table.rows.length;
     for (let i = 0; i < rowCount; i++) {
         const newCell = table.rows[i].insertCell(-1);
         newCell.classList.add("fade-in");
-        newCell.style.border = "1px solid #ddd";
-        newCell.style.padding = "10px";
-        newCell.style.textAlign = "center";
+        newCell.contentEditable = true;
+
         if (i === 0) {
-            newCell.outerHTML = `<th style='border: 1px solid #ddd; padding: 10px; text-align: center;'>سربرگ ${table.rows[0].cells.length}</th>`;
+            newCell.outerHTML = `<th class="note-table-th">سربرگ ${table.rows[0].cells.length}</th>`;
         } else {
+            newCell.className = "note-table-td";
             newCell.textContent = "";
         }
+
         setTimeout(() => newCell.classList.remove("fade-in"), 300);
     }
-    saveNotes();
+    await saveNotes();
 });
 
-themeBtn.addEventListener("click", () => {
-    body.classList.toggle("dark-mode");
-    body.classList.add("theme-transition");
-    setTimeout(() => body.classList.remove("theme-transition"), 500);
-    if (body.classList.contains("dark-mode")) {
-        localStorage.setItem("theme", "dark");
-    } else {
-        localStorage.setItem("theme", "light");
+document.addEventListener("keydown", (event) => {
+    if (event.key === "Delete") {
+        const selection = window.getSelection();
+        if (!selection.rangeCount) return;
+
+        const range = selection.getRangeAt(0);
+        const selectedRow = getSelectedRow();
+
+        if (!selectedRow) return;
+
+        const rowText = selectedRow.textContent.trim();
+        const selectedText = selection.toString().trim();
+
+        const isWholeRowSelected =
+            selectedText === rowText && selectedText !== "";
+
+        const isRangeCoveringWholeRow =
+            range.startContainer === selectedRow ||
+            range.startContainer.parentElement === selectedRow ||
+            range.commonAncestorContainer === selectedRow;
+
+        if (
+            (isWholeRowSelected || isRangeCoveringWholeRow) &&
+            selectedRow.parentElement.rows.length > 1
+        ) {
+            event.preventDefault();
+            selectedRow.classList.add("fade-out");
+            setTimeout(() => {
+                selectedRow.remove();
+                saveNotes();
+            }, 300);
+        }
     }
 });
 
-colorBtn.addEventListener("click", () => {
-    colorPicker.click();
-});
+colorBtn.addEventListener("click", () => colorPicker.click());
 
 colorPicker.addEventListener("change", (event) => {
     const selectedColor = event.target.value;
@@ -440,7 +582,7 @@ colorPicker.addEventListener("change", (event) => {
     if (selection.rangeCount) {
         const range = selection.getRangeAt(0);
         const selectedText = range.extractContents();
-        const span = $.createElement("span");
+        const span = document.createElement("span");
         span.style.color = selectedColor;
         span.classList.add("fade-in");
         span.appendChild(selectedText);
@@ -452,20 +594,12 @@ colorPicker.addEventListener("change", (event) => {
 
 fontSizeSelect.addEventListener("change", (event) => {
     const selectedFontSize = event.target.value;
+    if (!selectedFontSize) return;
+
     const selection = window.getSelection();
     if (selection.rangeCount) {
         const range = selection.getRangeAt(0);
-        const selectedNodes = range.cloneContents().childNodes;
-        selectedNodes.forEach((node) => {
-            if (
-                node.nodeType === Node.ELEMENT_NODE &&
-                node.style &&
-                node.style.fontSize
-            ) {
-                node.style.removeProperty("font-size");
-            }
-        });
-        const span = $.createElement("span");
+        const span = document.createElement("span");
         span.style.fontSize = selectedFontSize;
         span.classList.add("fade-in");
         span.appendChild(range.extractContents());
@@ -476,40 +610,46 @@ fontSizeSelect.addEventListener("change", (event) => {
     fontSizeSelect.selectedIndex = 0;
 });
 
-todoBtn.addEventListener("click", () => {
+hrBtn.addEventListener("click", () => {
     const selection = window.getSelection();
-    if (!selection.rangeCount) return;
-    const range = selection.getRangeAt(0);
-    const parentNode = range.commonAncestorContainer.parentElement.closest('.todo-item');
-    if (parentNode) {
-        return;
+    if (selection.rangeCount) {
+        const range = selection.getRangeAt(0);
+        const hr = document.createElement("hr");
+        hr.classList.add("fade-in");
+
+        if (!selection.isCollapsed) {
+            range.deleteContents();
+        }
+
+        range.insertNode(hr);
+        const br = document.createElement("br");
+        range.insertNode(br);
+        range.collapse(false);
+        selection.removeAllRanges();
+        selection.addRange(range);
+
+        setTimeout(() => hr.classList.remove("fade-in"), 300);
+        saveNotes();
     }
-    const todoSpan = $.createElement("span");
-    todoSpan.classList.add("todo-item");
-    todoSpan.innerHTML = '<span class="todo-checkbox"></span> ';
-    todoSpan.classList.add("fade-in");
-    range.insertNode(todoSpan);
-    setTimeout(() => todoSpan.classList.remove("fade-in"), 300);
-    saveNotes();
 });
 
-saveNoteBtn.addEventListener("click", () => {
-    if (currentNoteIndex !== -1) {
-        notes[currentNoteIndex].title = noteTitle.value;
-        notes[currentNoteIndex].content = noteContent.innerHTML;
-        notes[currentNoteIndex].lastEdited = new Date().getTime();
-        localStorage.setItem("notes", JSON.stringify(notes));
-        renderNotes();
-        showCustomModal("یادداشت ذخیره شد", "success");
-    } else {
+saveNoteBtn.addEventListener("click", async () => {
+    if (currentNoteIndex === -1) {
         showCustomModal("لطفا ابتدا یک یادداشت جدید ایجاد کنید", "error");
+        return;
     }
+    await saveNotes();
+    showCustomModal("یادداشت ذخیره شد", "success");
 });
 
 toggleSidebarBtn.addEventListener("click", () => {
     sidebar.classList.toggle("hidden");
-    toggleSidebarBtn.textContent = sidebar.classList.contains("hidden") ? "←" : "→";
-    noteEditor.style.width = sidebar.classList.contains("hidden") ? "100%" : "calc(100% - 250px)";
+    toggleSidebarBtn.textContent = sidebar.classList.contains("hidden")
+        ? "←"
+        : "→";
+    noteEditor.style.width = sidebar.classList.contains("hidden")
+        ? "100%"
+        : "calc(100% - 250px)";
 });
 
 searchInput.addEventListener("input", () => {
@@ -528,6 +668,7 @@ searchInput.addEventListener("input", () => {
     renderNotes(filteredNotes);
 });
 
+// Drag & Drop Images
 noteContent.addEventListener("dragover", (event) => {
     event.preventDefault();
 });
@@ -536,15 +677,21 @@ noteContent.addEventListener("drop", (event) => {
     event.preventDefault();
     const file = event.dataTransfer.files[0];
     if (!file || !file.type.startsWith("image/")) {
-        showCustomModal("لطفاً فقط فایل‌های تصویری (مثل PNG یا JPEG) را دراپ کنید.", "error");
+        showCustomModal(
+            "لطفاً فقط فایل‌های تصویری (مثل PNG یا JPEG) را دراپ کنید.",
+            "error"
+        );
         return;
     }
+
     const reader = new FileReader();
     reader.onload = (e) => {
-        const img = $.createElement("img");
+        const img = document.createElement("img");
         img.src = e.target.result;
         img.style.maxWidth = "100%";
-        img.style.maxHeight = "100%";
+        img.style.maxHeight = "300px";
+        img.style.borderRadius = "8px";
+        img.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.1)";
         img.classList.add("fade-in");
         noteContent.appendChild(img);
         setTimeout(() => img.classList.remove("fade-in"), 300);
@@ -553,133 +700,180 @@ noteContent.addEventListener("drop", (event) => {
     reader.readAsDataURL(file);
 });
 
-noteContent.addEventListener("click", (event) => {
-    if (event.target.classList.contains("todo-checkbox")) {
-        event.target.classList.toggle("checked");
-        saveNotes();
-    }
-});
-
-hrBtn.addEventListener("click", () => {
-    const selection = window.getSelection();
-    if (selection.rangeCount) {
-        const range = selection.getRangeAt(0);
-        const hr = $.createElement("hr");
-        hr.classList.add("fade-in");
-        if (!selection.isCollapsed) {
-            range.deleteContents();
+// Auto-save on input (بدون رفرش لیست)
+noteContent.addEventListener("input", () => {
+    clearTimeout(autoSaveTimeout);
+    autoSaveTimeout = setTimeout(async () => {
+        if (currentNoteIndex !== -1) {
+            const note = notes[currentNoteIndex];
+            note.content = noteContent.innerHTML;
+            note.lastEdited = Date.now();
+            await updateNote(note);
         }
-        range.insertNode(hr);
-        const br = $.createElement("br");
-        range.insertNode(br);
-        range.collapse(false);
-        selection.removeAllRanges();
-        selection.addRange(range);
-        setTimeout(() => hr.classList.remove("fade-in"), 300);
-        saveNotes();
-    }
+    }, 1000);
 });
 
-exportNotesBtn.addEventListener("click", () => {
+noteTitle.addEventListener("input", () => {
+    clearTimeout(autoSaveTimeout);
+    autoSaveTimeout = setTimeout(async () => {
+        if (currentNoteIndex !== -1) {
+            const note = notes[currentNoteIndex];
+            note.title = noteTitle.value;
+            note.lastEdited = Date.now();
+            await updateNote(note);
+        }
+    }, 1000);
+});
+
+// Export/Import
+exportNotesBtn.addEventListener("click", async () => {
     if (notes.length === 0) {
         showCustomModal("هیچ یادداشتی برای خروجی گرفتن وجود ندارد.", "error");
         return;
     }
-    if (currentNoteIndex !== -1) {
-        notes[currentNoteIndex].title = noteTitle.value;
-        notes[currentNoteIndex].content = noteContent.innerHTML;
-        notes[currentNoteIndex].lastEdited = new Date().getTime();
-        localStorage.setItem("notes", JSON.stringify(notes));
-    }
+
+    if (currentNoteIndex !== -1) await saveNotes();
+
     const dataStr = JSON.stringify(notes, null, 2);
     const blob = new Blob([dataStr], { type: "application/json" });
     const url = URL.createObjectURL(blob);
-    const link = $.createElement("a");
+    const link = document.createElement("a");
     link.href = url;
-    link.download = "notes-backup.json";
-    $.body.appendChild(link);
+    link.download = `notes-backup-${
+        new Date().toISOString().split("T")[0]
+    }.json`;
+    document.body.appendChild(link);
     link.click();
-    $.body.removeChild(link);
+    document.body.removeChild(link);
     URL.revokeObjectURL(url);
+    showCustomModal("فایل با موفقیت دانلود شد.", "success");
 });
 
-importNotesBtn.addEventListener("click", () => {
-    importFileInput.click();
-});
+importNotesBtn.addEventListener("click", () => importFileInput.click());
 
-importFileInput.addEventListener("change", (event) => {
+importFileInput.addEventListener("change", async (event) => {
     const file = event.target.files[0];
     if (!file) return;
+
     if (!file.name.endsWith(".json")) {
         showCustomModal("لطفاً یک فایل JSON معتبر انتخاب کنید.", "error");
         return;
     }
+
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
         try {
             const importedNotes = JSON.parse(e.target.result);
             if (!Array.isArray(importedNotes)) {
                 throw new Error("فایل JSON باید یک آرایه باشد.");
             }
-            const validNotes = importedNotes.every(note => 
-                typeof note === "object" &&
-                "title" in note &&
-                "content" in note &&
-                "lastEdited" in note
-            );
-            if (!validNotes) {
-                throw new Error("ساختار یادداشت‌ها در فایل JSON معتبر نیست.");
+
+            const deleteTx = db.transaction(STORE_NAME, "readwrite");
+            const deleteStore = deleteTx.objectStore(STORE_NAME);
+            await deleteStore.clear();
+
+            const newNotes = [];
+            for (const note of importedNotes) {
+                const { id, ...noteWithoutId } = note;
+                const newId = await addNote(noteWithoutId);
+                noteWithoutId.id = newId;
+                newNotes.push(noteWithoutId);
             }
-            notes = [...notes, ...importedNotes];
-            saveNotes();
+
+            notes.length = 0;
+            notes.push(...newNotes);
+            currentNoteIndex = -1;
             renderNotes();
-            showCustomModal("یادداشت‌ها با موفقیت وارد شدند.", "success");
+            loadNote();
+
+            showCustomModal(`یادداشت ها با موفقیت وارد شدند`, "success");
         } catch (error) {
-            showCustomModal("خطا در وارد کردن یادداشت‌ها: " + error.message, "error");
+            showCustomModal(
+                "خطا در وارد کردن یادداشت‌ها: " + error.message,
+                "error"
+            );
+        } finally {
+            importFileInput.value = "";
         }
-        importFileInput.value = "";
     };
     reader.readAsText(file);
 });
 
-// افزودن انیمیشن fade-in عمومی
-const style = $.createElement("style");
+// Theme
+themeBtn.addEventListener("click", () => {
+    body.classList.toggle("dark-mode");
+    body.classList.add("theme-transition");
+    setTimeout(() => body.classList.remove("theme-transition"), 500);
+
+    if (body.classList.contains("dark-mode")) {
+        localStorage.setItem("theme", "dark");
+    } else {
+        localStorage.setItem("theme", "light");
+    }
+});
+
+const savedTheme = localStorage.getItem("theme");
+if (savedTheme === "dark") {
+    body.classList.add("dark-mode");
+}
+
+// ——————————————————————————
+// Styles & Animations
+// ——————————————————————————
+const style = document.createElement("style");
 style.textContent = `
-    .fade-in {
-        animation: fadeIn 0.3s ease;
+    .fade-in { animation: fadeIn 0.3s ease; }
+    .fade-out { animation: fadeOut 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeOut { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-10px); } }
+    .theme-transition { transition: background-color 0.5s ease, color 0.5s ease; }
+    #note-list li.selected { background-color: rgba(74, 144, 226, 0.1); transition: 0.3s; }
+    #note-content table tr { opacity: 0; animation: tableRowFadeIn 0.3s ease forwards; }
+    @keyframes tableRowFadeIn { to { opacity: 1; } }
+    .note-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        margin: 15px 0;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
-    .fade-out {
-        animation: fadeOut 0.3s ease;
+    .note-table th {
+        background-color: #4a90e2;
+        color: white;
+        padding: 12px;
+        text-align: center;
+        font-weight: bold;
+        border-bottom: 2px solid #3a78c2;
     }
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
+    .note-table td {
+        border: 1px solid #ddd;
+        padding: 10px;
+        min-width: 60px;
+        min-height: 30px;
+        background-color: #fff;
+        transition: background-color 0.2s;
     }
-    @keyframes fadeOut {
-        from { opacity: 1; }
-        to { opacity: 0; }
+    .note-table td:hover { background-color: #f0f8ff; }
+
+    body.dark-mode .note-table th {
+        background-color: #1a5fb4;
+        border-bottom-color: #144c91;
     }
-    .theme-transition {
-        transition: background-color 0.5s ease, color 0.5s ease;
+    body.dark-mode .note-table td {
+        background-color: #2a2a2a;
+        border-color: #555;
+        color: #ddd;
     }
-    #note-list li.selected {
-        background-color: rgba(74, 144, 226, 0.1);
-        transition: background-color 0.3s ease;
-    }
+    body.dark-mode .note-table td:hover { background-color: #3a3a3a; }
 `;
-$.head.appendChild(style);
+document.head.appendChild(style);
 
-renderNotes();
-loadNote();
-
-setInterval(() => {
-    if (currentNoteIndex !== -1) {
-        notes[currentNoteIndex].title = noteTitle.value;
-        notes[currentNoteIndex].content = noteContent.innerHTML;
-        notes[currentNoteIndex].lastEdited = new Date().getTime();
-        localStorage.setItem("notes", JSON.stringify(notes));
-    }
-}, 2000);
+// ——————————————————————————
+// Start Application
+// ——————————————————————————
+initApp();
 
 if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
