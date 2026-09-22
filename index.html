@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>Note Pad Pro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#4f46e5">
+    <link rel="stylesheet" href="./Css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="manifest" href="./JSON/manifest.json">
+</head>
+<body>
+    <div id="app">
+        <!-- Sidebar -->
+        <aside id="sidebar">
+            <div class="sidebar-header">
+                <div class="app-branding">
+                    <div class="brand-logo">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                    </div>
+                    <h2>یادداشت‌ها</h2>
+                </div>
+                <button id="theme-btn" class="icon-btn theme-toggle-btn" title="تغییر تم">
+                    <!-- Moon Icon (Dark Mode Trigger) -->
+                    <svg class="moon-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+                    <!-- Sun Icon (Light Mode Trigger) -->
+                    <svg class="sun-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+                </button>
+            </div>
+
+            <div class="sidebar-actions">
+                <button id="new-note" class="primary-btn">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                    <span>یادداشت جدید</span>
+                </button>
+
+                <div class="search-box">
+                    <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                    <input type="text" id="search-notes" placeholder="جستجو میان یادداشت‌ها...">
+                </div>
+            </div>
+
+            <div class="note-list-container">
+                <ul id="note-list"></ul>
+                <div id="empty-state" class="empty-state" style="display: none;">
+                    <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="9" x2="15" y1="13" y2="13"/><line x1="9" x2="13" y1="17" y2="17"/></svg>
+                    <p>هیچ یادداشتی یافت نشد</p>
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                <button id="export-notes-btn" class="footer-action-btn" title="خروجی فایل پشتیبان">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                    <span>خروجی</span>
+                </button>
+                <button id="import-notes-btn" class="footer-action-btn" title="وارد کردن یادداشت‌ها">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                    <span>ورودی</span>
+                </button>
+                <input type="file" id="import-file-input" style="display: none;" accept=".json">
+            </div>
+        </aside>
+
+        <!-- Editor Area -->
+        <main id="note-editor">
+            <!-- Top Bar / Toolbar -->
+            <header class="editor-header">
+                <div class="header-left">
+                    <button id="toggle-sidebar-btn" class="icon-btn" title="بستن/باز کردن سایدبار">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/></svg>
+                    </button>
+                </div>
+
+                <div id="editor-toolbar">
+                    <!-- Text Formatting -->
+                    <div class="toolbar-group">
+                        <button id="bold-btn" class="toolbar-btn" title="درشت (Bold)"><b>B</b></button>
+                        <button id="italic-btn" class="toolbar-btn" title="مورب (Italic)"><i>I</i></button>
+                        <button id="underline-btn" class="toolbar-btn" title="خط زیر متن (Underline)"><u>U</u></button>
+                    </div>
+
+                    <div class="toolbar-divider"></div>
+
+                    <!-- Size & Direction -->
+                    <div class="toolbar-group">
+                        <select id="font-size-select" title="اندازه متن">
+                            <option value="">اندازه متن</option>
+                            <option value="12px">کوچک (12px)</option>
+                            <option value="14px">عادی (14px)</option>
+                            <option value="16px">متوسط (16px)</option>
+                            <option value="18px">بزرگ (18px)</option>
+                            <option value="22px">خیلی بزرگ (22px)</option>
+                            <option value="28px">تیتر (28px)</option>
+                        </select>
+                        <button id="rtl-ltr-btn" class="toolbar-btn" title="تغییر جهت متن (RTL/LTR)">
+                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16"/><path d="m16 6 4 6-4 6"/><path d="M8 18 4 12l4-6"/></svg>
+                        </button>
+                    </div>
+
+                    <div class="toolbar-divider"></div>
+
+                    <!-- Lists & Colors -->
+                    <div class="toolbar-group">
+                        <button id="insert-unordered-list" class="toolbar-btn" title="فهرست نقطه‌ای">
+                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>
+                        </button>
+                        <button id="insert-ordered-list" class="toolbar-btn" title="فهرست شماره‌دار">
+                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="10" x2="21" y1="6" y2="6"/><line x1="10" x2="21" y1="12" y2="12"/><line x1="10" x2="21" y1="18" y2="18"/><path d="M4 6h1v4"/><path d="M4 10h2"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/></svg>
+                        </button>
+                        <button id="color-btn" class="toolbar-btn color-preview-btn" title="رنگ متن">
+                            <span class="color-dot"></span>
+                        </button>
+                        <input type="color" id="color-picker" class="hidden-color-picker">
+                        <button id="hr-btn" class="toolbar-btn" title="خط جداکننده">―</button>
+                    </div>
+
+                    <div class="toolbar-divider"></div>
+
+                    <!-- Inserts & Tables -->
+                    <div class="toolbar-group">
+                        <button id="insert-link-btn" class="toolbar-btn" title="افزودن لینک (Ctrl+K)">
+                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                        </button>
+                        <button id="insert-table-btn" class="toolbar-btn" title="افزودن جدول">
+                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/></svg>
+                        </button>
+                        <button id="add-row-btn" class="toolbar-btn text-icon-btn" title="افزودن سطر">+ سطر</button>
+                        <button id="add-column-btn" class="toolbar-btn text-icon-btn" title="افزودن ستون">+ ستون</button>
+                    </div>
+
+                    <div class="toolbar-divider"></div>
+
+                    <div class="toolbar-group">
+                        <button id="save-note" class="save-action-btn" title="ذخیره سریع یادداشت (Ctrl+S)">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                            <span>ذخیره</span>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Editor Body -->
+            <div id="editor-content-wrapper" class="editor-content-container">
+                <input type="text" id="note-title" placeholder="عنوان یادداشت..." autocomplete="off">
+                <div id="note-content" contenteditable="true" data-placeholder="نوشتن را از اینجا آغاز کنید..."></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal System -->
+    <div id="custom-modal" class="modal-backdrop" style="display: none;">
+        <div class="modal">
+            <div class="modal-icon-wrapper">
+                <div class="modal-icon"></div>
+            </div>
+            <p id="modal-message"></p>
+
+            <!-- Table Form -->
+            <div id="modal-form" class="modal-form" style="display: none;">
+                <div class="modal-form-row">
+                    <label for="table-rows">تعداد سطرها:</label>
+                    <input type="number" id="table-rows" min="1" max="50" value="3">
+                </div>
+                <div class="modal-form-row">
+                    <label for="table-cols">تعداد ستون‌ها:</label>
+                    <input type="number" id="table-cols" min="1" max="20" value="3">
+                </div>
+            </div>
+
+            <!-- Hyperlink Form Modal -->
+            <div id="modal-link-form" class="modal-form" style="display: none;">
+                <div class="modal-input-group">
+                    <label for="link-url-input">آدرس اینترنتی (URL):</label>
+                    <input type="text" id="link-url-input" placeholder="https://example.com" dir="ltr">
+                </div>
+                <div id="link-text-group" class="modal-input-group">
+                    <label for="link-text-input">متن نمایشی لینک:</label>
+                    <input type="text" id="link-text-input" placeholder="عنوان یا متن لینک">
+                </div>
+            </div>
+
+            <div class="modal-buttons">
+                <button id="modal-close-btn" class="modal-btn modal-btn-secondary">متوجه شدم</button>
+                <button id="modal-confirm-btn" class="modal-btn modal-btn-primary" style="display: none;">تأیید</button>
+                <button id="modal-cancel-btn" class="modal-btn modal-btn-cancel" style="display: none;">انصراف</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="./JS/script.js"></script>
+</body>
+</html>
